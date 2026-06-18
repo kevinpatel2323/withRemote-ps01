@@ -65,6 +65,11 @@ const CONTACT_PROPERTIES = [
         const client = new HubSpotClient({ accessToken: token ?? 'na' });
         const api: HubSpotContactSearchApi = {
           async searchContacts({ sinceMs, after, limit }) {
+            // NOTE: the Contacts object's canonical modified-time property is
+            // `lastmodifieddate`. `hs_lastmodifieddate` is for companies/deals/tickets
+            // and is returned `null` for contacts on many portals — filtering/sorting on
+            // it makes incremental silently return nothing (full backfill still works
+            // because it sends no filter). See hubspot.connector.lastModifiedMs.
             const req: Record<string, unknown> = {
               filterGroups:
                 sinceMs > 0
@@ -72,7 +77,7 @@ const CONTACT_PROPERTIES = [
                       {
                         filters: [
                           {
-                            propertyName: 'hs_lastmodifieddate',
+                            propertyName: 'lastmodifieddate',
                             operator: 'GT',
                             value: String(sinceMs),
                           },
@@ -80,7 +85,7 @@ const CONTACT_PROPERTIES = [
                       },
                     ]
                   : [],
-              sorts: [{ propertyName: 'hs_lastmodifieddate', direction: 'ASCENDING' }],
+              sorts: [{ propertyName: 'lastmodifieddate', direction: 'ASCENDING' }],
               properties: CONTACT_PROPERTIES,
               limit,
               after,

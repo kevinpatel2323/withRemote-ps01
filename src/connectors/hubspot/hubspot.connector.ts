@@ -16,8 +16,10 @@ export interface HubSpotConnectorOptions {
 
 /**
  * HubSpot connector (PLAN §5.2).
- * - Incremental: CRM Search filtered on hs_lastmodifieddate > cursor, ascending;
- *   cursor = the largest hs_lastmodifieddate (epoch ms) seen.
+ * - Incremental: CRM Search filtered on lastmodifieddate > cursor, ascending;
+ *   cursor = the largest lastmodifieddate (epoch ms) seen. The Contacts object uses
+ *   `lastmodifieddate`; `hs_lastmodifieddate` is null for contacts on many portals, so
+ *   filtering on it would make incremental silently sync nothing.
  * - Full: the same search from time 0.
  * - Stale: timestamps don't expire; a lost/corrupt cursor simply restarts a full sync.
  */
@@ -104,7 +106,10 @@ export class HubSpotConnector implements SourceConnector<unknown> {
 
   private lastModifiedMs(raw: unknown): number {
     const props = (raw as { properties?: Record<string, string> })?.properties ?? {};
-    const value = props.hs_lastmodifieddate ?? props.lastmodifieddate;
+    // Prefer `lastmodifieddate` (the contact-canonical property the search filters/sorts
+    // on); fall back to `hs_lastmodifieddate` only if it's absent. The two MUST agree with
+    // the search property so the stored cursor lines up with the GT filter.
+    const value = props.lastmodifieddate ?? props.hs_lastmodifieddate;
     const d = this.toDate(value);
     return d ? d.getTime() : NaN;
   }

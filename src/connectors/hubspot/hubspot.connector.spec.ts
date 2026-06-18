@@ -62,7 +62,7 @@ describe('HubSpotConnector.normalize', () => {
 });
 
 describe('HubSpotConnector incremental', () => {
-  it('paginates and checkpoints the max hs_lastmodifieddate', async () => {
+  it('paginates and checkpoints the max lastmodifieddate', async () => {
     const searchContacts = jest
       .fn()
       .mockResolvedValueOnce({ results: [contact], after: 'a1' })
@@ -71,7 +71,13 @@ describe('HubSpotConnector incremental', () => {
           {
             ...contact,
             id: '2',
-            properties: { ...contact.properties, hs_lastmodifieddate: '1735800000000' },
+            // Contacts carry the real timestamp in `lastmodifieddate`; `hs_lastmodifieddate`
+            // is null on this portal and must not drive the cursor.
+            properties: {
+              ...contact.properties,
+              lastmodifieddate: '2026-01-03T00:00:00Z',
+              hs_lastmodifieddate: null,
+            },
           },
         ],
         after: undefined,
@@ -84,10 +90,10 @@ describe('HubSpotConnector incremental', () => {
     expect(batches).toHaveLength(2);
     const ids = batches.flatMap((b) => b.records).map((r: any) => r.id);
     expect(ids).toEqual(['1', '2']);
-    // Final checkpoint is the largest hs_lastmodifieddate seen.
+    // Final checkpoint is the largest lastmodifieddate seen (2026-01-03 > 2026-01-02).
     expect(batches[batches.length - 1].checkpoint).toEqual({
       type: 'lastmodified',
-      value: '1735800000000',
+      value: String(Date.parse('2026-01-03T00:00:00Z')),
     });
     expect(searchContacts).toHaveBeenLastCalledWith(
       expect.objectContaining({ sinceMs: 1735000000000, after: 'a1' }),
