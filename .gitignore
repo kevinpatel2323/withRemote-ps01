@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.local
+.DS_Store
+*.tsbuildinfo
+
+# Local tooling / agent state — not part of the project
+.claude/
+.code-review-graph/

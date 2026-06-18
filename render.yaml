@@ -1,0 +1,47 @@
+# Render blueprint (PLAN §3, EXECUTION M9). Single free Web Service + free Postgres.
+# Per PLAN §14: free Postgres is deleted ~30 days after creation; upgrade for persistence.
+services:
+  - type: web
+    name: data-sync-pipeline
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    # Migrate-on-deploy then boot (PLAN §12 M9). Migrations are idempotent.
+    startCommand: npm run start:render
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sync-db
+          property: connectionString
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: SYNC_CRON
+        value: '*/15 * * * *'
+      - key: SYNC_LOOKBACK_SECONDS
+        value: '60'
+      # Secrets are set in the Render dashboard (sync: false = not committed).
+      - key: STRIPE_API_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: HUBSPOT_PRIVATE_APP_TOKEN
+        sync: false
+      - key: HUBSPOT_WEBHOOK_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        value: primary
+
+databases:
+  - name: sync-db
+    plan: free
+    databaseName: syncdb
+    user: sync
