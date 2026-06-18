@@ -10,3 +10,9 @@ coverage/
 # Local tooling / agent state — not part of the project
 .claude/
 .code-review-graph/
+.agents/
+.devin/
+.factory/
+.qoder/
+.trae/
+skills-lock.json
